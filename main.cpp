@@ -1,6 +1,6 @@
 #include <iostream>
 #include <v8pp/module.hpp>
-//#include <v8pp/class.hpp>
+#include <v8pp/class.hpp>
 #include "v8.h"
 #include "libplatform/libplatform.h"
 
@@ -39,17 +39,17 @@ void say_hello(char* argv[]) {
         v8pp::module myLib(isolate);
         myLib.set_const("PI", 3.1415);
 //
-//        v8pp::class_<X> X_class(isolate);
-//        X_class
-//                // specify X constructor signature
-//                .ctor<int, bool>()
-//                        // bind variable
-//                .set("var", &X::var)
-//                        // bind function
-//                .set("fun", &X::set)
-//                        // bind read-only property
-//                .set("prop",  v8pp::property(&X::get));
-//        myLib.set("X", X_class);
+        v8pp::class_<X> X_class(isolate);
+        X_class
+                // specify X constructor signature
+                .ctor<int, bool>()
+                        // bind variable
+                .set("var", &X::var)
+                        // bind function
+                .set("fun", &X::set)
+                        // bind read-only property
+                .set("prop",  v8pp::property(&X::get));
+        myLib.set("X", X_class);
 
         // Create a new context.
         v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, global);
@@ -63,7 +63,7 @@ void say_hello(char* argv[]) {
             printf("context->Global()->Set() success=%d\n", success.FromJust());
             // Create a string containing the JavaScript source code.
             v8::Local<v8::String> source =
-                    v8::String::NewFromUtf8(isolate, "myLib.PI + '#Hello' + ', World!'").ToLocalChecked();
+                    v8::String::NewFromUtf8(isolate, "(typeof myLib.X) + myLib.PI + '#Hello' + ', World!'").ToLocalChecked();
 
             // Compile the source code.
             v8::Local<v8::Script> script =
