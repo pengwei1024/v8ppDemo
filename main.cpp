@@ -63,7 +63,8 @@ void say_hello(char* argv[]) {
             printf("context->Global()->Set() success=%d\n", success.FromJust());
             // Create a string containing the JavaScript source code.
             v8::Local<v8::String> source =
-                    v8::String::NewFromUtf8(isolate, "(typeof myLib.X) + myLib.PI + '#Hello' + ', World!'").ToLocalChecked();
+                    v8::String::NewFromUtf8(isolate, "var x = new myLib.X(1024, true);(typeof myLib.X) "
+                                                     "+ myLib.PI + '#Hello' + ', World!' + x.prop").ToLocalChecked();
 
             // Compile the source code.
             v8::Local<v8::Script> script =
