@@ -64,7 +64,7 @@ void say_hello(char* argv[]) {
             // Create a string containing the JavaScript source code.
             v8::Local<v8::String> source =
                     v8::String::NewFromUtf8(isolate, "var x = new myLib.X(1024, true);(typeof myLib.X) "
-                                                     "+ myLib.PI + '#Hello' + ', World!' + x.prop").ToLocalChecked();
+                                                     "+ myLib.PI + '#Hello' + ', World!'").ToLocalChecked();
 
             // Compile the source code.
             v8::Local<v8::Script> script =
@@ -77,12 +77,12 @@ void say_hello(char* argv[]) {
             v8::String::Utf8Value utf8(isolate, result);
             printf("result = %s\n", *utf8);
         }
-        // Dispose the isolate and tear down V8.
-        isolate->Dispose();
-        v8::V8::Dispose();
-        v8::V8::ShutdownPlatform();
-        delete create_params.array_buffer_allocator;
     }
+    // Dispose the isolate and tear down V8.
+    isolate->Dispose();
+    v8::V8::Dispose();
+    v8::V8::ShutdownPlatform();
+    delete create_params.array_buffer_allocator;
 }
 
 int main(int argc, char *argv[]) {
