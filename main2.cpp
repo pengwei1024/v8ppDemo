@@ -2,8 +2,9 @@
 #include "v8.h"
 #include "V8Binding.h"
 #include "libplatform/libplatform.h"
+#include "SnapshotUtil.h"
 
-v8::SnapshotCreator *creator;
+#define MAKE_SNAPSHOT
 
 void nativeMethod(const v8::FunctionCallbackInfo<v8::Value> &args) {
     printf("call nativeMethod\n");
@@ -20,7 +21,6 @@ void nativeMethod(const v8::FunctionCallbackInfo<v8::Value> &args) {
                     .ToLocalChecked());
 }
 
-
 int main(int argc, char *argv[]) {
     // Initialize V8.
     v8::V8::InitializeICUDefaultLocation(argv[0]);
@@ -29,15 +29,17 @@ int main(int argc, char *argv[]) {
     v8::V8::InitializePlatform(platform.get());
     v8::V8::Initialize();
     printf("version=%s\n", v8::V8::GetVersion());
-    v8::Isolate::CreateParams create_params;
-    create_params.array_buffer_allocator =
-            v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+    v8::StartupData initData = {nullptr, 0};
+    SnapshotUtil::readFile(initData);
     std::vector<intptr_t> external_references;
     external_references.push_back((intptr_t)nativeMethod);
     char* abc = "hello";
     external_references.push_back((intptr_t)abc);
-    v8::SnapshotCreator create(external_references.data(), nullptr);
-    v8binding::creator = &create;
+#ifndef MAKE_SNAPSHOT
+    v8::SnapshotCreator create(external_references.data(), &initData);
+#else
+    v8::SnapshotCreator create(external_references.data());
+#endif
 //    auto isolate_ = v8::Isolate::Allocate();
 //    v8::Isolate::Initialize(isolate_, create_params);
 //    isolate_->Enter();
@@ -51,20 +53,23 @@ int main(int argc, char *argv[]) {
         v8::HandleScope handle_scope(isolate_);
         // Create a new context.
         v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+        v8::Local<v8::Context> context = v8::Context::New(isolate_, nullptr, global);
+#ifdef MAKE_SNAPSHOT
         v8::Local<v8::ObjectTemplate> swanObjTpl = v8::ObjectTemplate::New(isolate_);
         swanObjTpl->SetInternalFieldCount(1);
         global->Set(v8::String::NewFromUtf8(isolate_, "_na").ToLocalChecked(), swanObjTpl);
         v8::Local<v8::FunctionTemplate> fun = v8::FunctionTemplate::New(isolate_, &nativeMethod);
         swanObjTpl->Set(isolate_, "nativeMethod", fun);
-        v8::Local<v8::Context> context = v8::Context::New(isolate_, nullptr, global);
+
         v8::Local<v8::Object> wrapper = swanObjTpl->NewInstance(context).ToLocalChecked();
         if (swanObjTpl->NewInstance(context).ToLocal(&wrapper)) {
             wrapper->SetInternalField(0, v8::External::New(isolate_, abc));
         }
         context->Global()->Set(context, v8::String::NewFromUtf8(isolate_, "_na").ToLocalChecked(), wrapper)
-        .IsJust();
+                .IsJust();
         create.AddContext(context);
         create.SetDefaultContext(context);
+#endif
 
         // Enter the context for compiling and running the hello world script.
         v8::Context::Scope context_scope(context);
@@ -84,6 +89,13 @@ int main(int argc, char *argv[]) {
             printf("result = %s\n", *utf8);
         }
     }
+#ifdef MAKE_SNAPSHOT
     auto data = create.CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kClear);
     printf("CreateBlob data=%d\n", data.raw_size);
+    SnapshotUtil::writeFile(data);
+#endif
+
+    isolate_->Dispose();
+    v8::V8::Dispose();
+    v8::V8::ShutdownPlatform();
 }
